@@ -6,9 +6,48 @@ Unlike blur-style spoiler blockers, SixBeGone filters a site's own data (the API
 
 > Unofficial. Not affiliated with, endorsed by, or connected to Rockstar Games or Take-Two Interactive.
 
+## Install
+
+SixBeGone isn't in the browser stores yet, so you install it from a zip file. It takes about a minute.
+
+**[⬇ Download the latest release](https://github.com/onni-min/SixBeGone/releases/latest)**
+
+On the release page, under **Assets**, download the zip for your browser:
+
+| Browser | File |
+|---|---|
+| Chrome, Edge, Brave, Opera, Vivaldi and other Chromium browsers | `sixbegone-…-chrome.zip` |
+| Firefox 128 or newer | `sixbegone-…-firefox.zip` |
+
+### Chrome, Edge, Brave, Opera, Vivaldi
+
+1. **Unzip** the file. Put the folder somewhere you'll keep it, like your Documents folder. The browser loads the extension from this folder, so **don't delete it**.
+2. Open your browser's extensions page by pasting this into the address bar:
+   - Chrome: `chrome://extensions`
+   - Edge: `edge://extensions`
+   - Brave: `brave://extensions`
+   - Opera: `opera://extensions`
+   - Vivaldi: `vivaldi://extensions`
+3. Turn on **Developer mode**. It's a switch in the top-right corner (in Edge it's in the left sidebar).
+4. Click **Load unpacked** and choose the folder you unzipped. It's the folder that has `manifest.json` inside it.
+5. Done. Open YouTube and GTA 6 content is gone. To reach settings, click the puzzle-piece icon in the toolbar, then pin **SixBeGone**.
+
+Your browser may sometimes warn about developer-mode extensions. That's normal for extensions installed outside the store. Click **Keep** or close the warning.
+
+**To update:** download the new zip, unzip it over the old folder (replace the files), then click the ↻ reload button on SixBeGone's card on the extensions page.
+
+### Firefox
+
+1. Open `about:debugging#/runtime/this-firefox` (paste it into the address bar).
+2. Click **Load Temporary Add-on…** and choose the downloaded `sixbegone-…-firefox.zip`. You don't need to unzip it.
+3. A SixBeGone settings tab opens. Click **Grant access** and allow it. Firefox makes extensions ask before they can work on a site.
+4. Open YouTube. GTA 6 content is gone.
+
+**Heads-up:** Firefox removes temporary add-ons when you close the browser. You'll need to repeat steps 1–3 after each restart until SixBeGone is on [addons.mozilla.org](https://addons.mozilla.org).
+
 ## Status
 
-Early development, YouTube complete for a first release:
+**v1.0.0**: YouTube is fully covered:
 
 - Home feed, subscriptions, search, watch-page sidebar, end screen, Shorts shelves and infinite scroll: GTA 6 items are removed before they render.
 - Opening a GTA 6 video directly shows a full-page cover with the player paused ("Go back" or "Watch anyway").
@@ -65,6 +104,8 @@ npm run build          # .output/chrome-mv3
 npm run build:firefox  # .output/firefox-mv3
 npm run zip            # store-ready zip
 ```
+
+To release: bump `version` in `package.json`, merge to `main`, then push a matching tag (`git tag v1.2.3 && git push origin v1.2.3`). The Release workflow builds both zips and publishes the GitHub release.
 
 To load a build manually: in Chrome open `chrome://extensions`, turn on Developer mode, choose **Load unpacked** and select `.output/chrome-mv3`. In Firefox open `about:debugging#/runtime/this-firefox`, choose **Load Temporary Add-on** and select `.output/firefox-mv3/manifest.json`.
 
