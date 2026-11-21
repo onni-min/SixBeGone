@@ -47,7 +47,9 @@ Your browser may sometimes warn about developer-mode extensions. That's normal f
 
 ## Status
 
-**v1.0.0**: YouTube is fully covered:
+**v1.1.0**: YouTube and X are covered.
+
+On YouTube:
 
 - Home feed, subscriptions, search, watch-page sidebar, end screen, Shorts shelves and infinite scroll: GTA 6 items are removed before they render.
 - Opening a GTA 6 video directly shows a full-page cover with the player paused ("Go back" or "Watch anyway").
