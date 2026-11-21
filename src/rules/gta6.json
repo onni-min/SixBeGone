@@ -1,0 +1,29 @@
+{
+  "$comment": "Built-in GTA 6 rules. A post is removed when the summed weight of the distinct phrases it contains reaches `threshold`. Strong phrases carry the full threshold on their own; weak ones only count together. Scope is GTA 6 only: bare 'GTA', 'Vice City' or 'Rockstar' must never reach the threshold alone, so GTA 5, GTA Online and the older games stay visible.",
+  "version": 1,
+  "threshold": 10,
+  "terms": [
+    { "phrase": "gta 6", "weight": 10 },
+    { "phrase": "gta vi", "weight": 10 },
+    { "phrase": "gta six", "weight": 10 },
+    { "phrase": "grand theft auto 6", "weight": 10 },
+    { "phrase": "grand theft auto vi", "weight": 10 },
+    { "phrase": "grand theft auto six", "weight": 10 },
+    { "phrase": "гта 6", "weight": 10 },
+    { "phrase": "гта vi", "weight": 10 },
+
+    { "phrase": "lucia caminos", "weight": 10 },
+    { "phrase": "jason duval", "weight": 10 },
+
+    { "phrase": "leonida", "weight": 6 },
+    { "phrase": "port gellhorn", "weight": 6 },
+    { "phrase": "grassrivers", "weight": 6 },
+    { "phrase": "jason and lucia", "weight": 6 },
+    { "phrase": "lucia and jason", "weight": 6 },
+
+    { "phrase": "gta", "weight": 4 },
+    { "phrase": "grand theft auto", "weight": 4 },
+    { "phrase": "vice city", "weight": 4 }
+  ],
+  "channels": []
+}

@@ -1,0 +1,48 @@
+:root {
+  color-scheme: light dark;
+  --accent: #e0457b;
+  font: 14px/1.45 system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+body { margin: 0; padding: 16px; }
+body.popup { width: 280px; }
+body.options { max-width: 640px; margin: 0 auto; padding: 24px; }
+
+h1 { font-size: 18px; margin: 0; }
+h2 { font-size: 15px; margin: 20px 0 4px; }
+header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.muted { opacity: 0.7; margin: 4px 0; }
+.row { display: flex; gap: 8px; align-items: center; margin-top: 12px; }
+
+button {
+  font: inherit;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+button:disabled { opacity: 0.5; cursor: default; }
+#save, #grant { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font: 13px ui-monospace, monospace;
+  padding: 8px;
+  border-radius: 6px;
+}
+
+.switch { display: flex; gap: 6px; align-items: center; cursor: pointer; }
+.switch input { accent-color: var(--accent); width: 16px; height: 16px; }
+
+.notice {
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 12px 0;
+}
+
+footer { margin-top: 32px; font-size: 12px; }
+footer a { color: inherit; }
