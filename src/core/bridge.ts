@@ -37,6 +37,32 @@ function listen<T>(name: string, handler: (msg: T) => void) {
   });
 }
 
+/**
+ * Settings are also mirrored into the site's localStorage so the MAIN-world
+ * script can read them synchronously at startup. Messages are async, and the
+ * first page load's data (ytInitialData) is usually assigned before they
+ * arrive. Without this, a paused or disabled filter would still prune the
+ * first page, and custom keywords would miss it.
+ */
+const SETTINGS_MIRROR_KEY = 'sixbegone:settings';
+
+export function mirrorSettings(settings: Settings): void {
+  try {
+    localStorage.setItem(SETTINGS_MIRROR_KEY, JSON.stringify(settings));
+  } catch {
+    // Storage blocked (private mode, quota); the async message still works.
+  }
+}
+
+export function readMirroredSettings(): unknown {
+  try {
+    const raw = localStorage.getItem(SETTINGS_MIRROR_KEY);
+    return raw ? JSON.parse(raw) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export const sendToMain = (msg: ToMain) => send(TO_MAIN, msg);
 export const sendToIsolated = (msg: ToIsolated) => send(TO_ISOLATED, msg);
 export const onMainMessage = (h: (m: ToMain) => void) => listen<ToMain>(TO_MAIN, h);

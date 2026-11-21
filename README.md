@@ -8,11 +8,11 @@ Unlike blur-style spoiler blockers, SixBeGone filters a site's own data (the API
 
 ## Status
 
-Early development (M0): project scaffold, keyword matcher and settings UI. Filtering on YouTube lands in M1.
+Early development. YouTube filtering works for the home feed, search, the watch-page sidebar and end screen, Shorts shelves, and infinite scroll (M1). Next (M2): the Shorts player, a blocking overlay for GTA 6 watch pages, comments, and autoplay.
 
 | Site | Status |
 |---|---|
-| YouTube | In progress |
+| YouTube | Feeds, search, sidebar (M1); Shorts player, watch page, comments next |
 | X | Planned |
 | TikTok | Planned |
 | Instagram | Planned |

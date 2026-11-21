@@ -1,4 +1,5 @@
-import { onIsolatedMessage, sendToMain } from '../core/bridge';
+import { mirrorSettings, onIsolatedMessage, sendToMain } from '../core/bridge';
+import type { Settings } from '../core/settings';
 import { ALL_SITE_MATCHES } from '../core/sites';
 import { addRemoved, loadSettings, onSettingsChanged } from '../core/storage';
 
@@ -8,7 +9,11 @@ export default defineContentScript({
   matches: ALL_SITE_MATCHES,
   runAt: 'document_start',
   async main() {
-    const push = async () => sendToMain({ type: 'settings', settings: await loadSettings() });
+    const deliver = (settings: Settings) => {
+      mirrorSettings(settings);
+      sendToMain({ type: 'settings', settings });
+    };
+    const push = async () => deliver(await loadSettings());
 
     onIsolatedMessage((msg) => {
       if (msg.type === 'hello') void push();
@@ -16,7 +21,7 @@ export default defineContentScript({
         void addRemoved(Math.min(msg.count, 10_000));
       }
     });
-    onSettingsChanged((settings) => sendToMain({ type: 'settings', settings }));
+    onSettingsChanged(deliver);
 
     // Covers the case where the MAIN script said hello before we were listening.
     await push();

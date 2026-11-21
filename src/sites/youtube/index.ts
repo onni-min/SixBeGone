@@ -1,19 +1,21 @@
 import type { FilterState } from '../../core/filter-state';
+import { trapGlobal, wrapFetch, wrapXhr, type Pruner } from './intercept';
+import { prune } from './walk';
 
 /**
  * YouTube integration, running in the page's MAIN world at document_start.
  *
- * M0 wires up the filter state only. M1 adds, in this folder:
- *   - intercept.ts: wrap fetch/XHR for /youtubei/v1/(browse|search|next|reel|guide)
- *     and trap window.ytInitialData / ytInitialPlayerResponse with a setter
- *   - walk.ts: generic JSON walker that finds item renderers and view models
- *     (richItemRenderer, videoRenderer, lockupViewModel, shortsLockupViewModel,
- *     commentThreadRenderer, …), extracts their text and removes matches
- *
- * References: FilterTube js/seed.js + js/filter_logic.js (MIT, may adapt with
- * attribution in THIRD_PARTY_NOTICES.md); BlockTube src/scripts/seed.js +
- * inject.js (GPL-3.0, read only, do not copy).
+ * Approach informed by FilterTube (MIT) and BlockTube (GPL-3.0, read only):
+ * prune InnerTube JSON before render by trapping ytInitialData and wrapping
+ * fetch/XHR for /youtubei/v1/* endpoints. The code here is our own.
  */
-export function startYouTube(state: FilterState): void {
-  void state;
+export function startYouTube(state: FilterState, win: Window = window): void {
+  const pruner: Pruner = (data) => {
+    if (!state.active) return;
+    state.reportRemoved(prune(data, state.matcher));
+  };
+
+  trapGlobal(win, 'ytInitialData', pruner);
+  wrapFetch(win, pruner);
+  wrapXhr(win, pruner);
 }

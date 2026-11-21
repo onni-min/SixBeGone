@@ -2,14 +2,14 @@
  * Filter state for a MAIN-world interceptor: the current matcher, rebuilt
  * whenever new settings arrive over the bridge.
  *
- * It starts from the built-in rules with filtering on, so pages are filtered
- * from the very first response even before the bridge has delivered the
- * user's settings.
+ * It starts from the settings mirrored in the site's localStorage (or the
+ * defaults, with filtering on, on a first run), so the very first response is
+ * filtered correctly before the bridge has delivered anything.
  */
 import { compileMatcher, type Matcher } from './matcher';
 import { BUILTIN_RULES } from './rules';
-import { DEFAULT_SETTINGS, isActive, type Settings } from './settings';
-import { onMainMessage, sendToIsolated } from './bridge';
+import { DEFAULT_SETTINGS, isActive, withDefaults, type Settings } from './settings';
+import { onMainMessage, readMirroredSettings, sendToIsolated } from './bridge';
 
 export interface FilterState {
   readonly matcher: Matcher;
@@ -19,14 +19,15 @@ export interface FilterState {
 }
 
 export function createFilterState(): FilterState {
-  let settings: Settings = DEFAULT_SETTINGS;
+  const mirrored = readMirroredSettings();
+  let settings: Settings = mirrored === undefined ? DEFAULT_SETTINGS : withDefaults(mirrored);
   let matcher = build(settings);
   let pending = 0;
   let timer: ReturnType<typeof setTimeout> | undefined;
 
   onMainMessage((msg) => {
     if (msg.type === 'settings') {
-      settings = msg.settings;
+      settings = withDefaults(msg.settings);
       matcher = build(settings);
     }
   });
