@@ -9,7 +9,7 @@ export default defineConfig({
   manifest: ({ browser }) => ({
     name: 'SixBeGone',
     description:
-      'Removes GTA 6 videos, posts and comments before you see them. Unofficial; not affiliated with Rockstar Games or Take-Two.',
+      'Removes GTA 6 videos, posts and comments from YouTube and X. Unofficial; not affiliated with Rockstar Games or Take-Two.',
     permissions: ['storage'],
     host_permissions: ALL_SITE_MATCHES,
     ...(browser === 'firefox'

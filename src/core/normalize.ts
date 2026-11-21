@@ -10,12 +10,12 @@
  *   "🔥 #GTA6 Leaks!!"     -> " gta 6 leaks "
  *   "G.T.A. VI"            -> " gta vi "
  *   "GTAVI trailer"        -> " gta vi trailer "
- *   "gta‌6" (zero-width)   -> " gta 6 "
+ *   "gta\u200C6" (zero-width) -> " gta 6 "
  */
 
 // Zero-width characters, word joiner, BOM, soft hyphen, variation selectors
 // and tag characters (used in emoji flags but also to smuggle text).
-const INVISIBLE = /[­​-‏⁠-⁤﻿︀-️]|\uDB40[\uDC00-\uDC7F]/g;
+const INVISIBLE = /[\u00AD\u200B-\u200F\u2060-\u2064\uFEFF\uFE00-\uFE0F]|\uDB40[\uDC00-\uDC7F]/g;
 
 // Combining marks left over after NFD (accents).
 const MARKS = /\p{M}+/gu;

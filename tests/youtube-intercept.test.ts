@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import { isFilteredUrl, trapGlobal, wrapFetch, wrapXhr, type Pruner } from '../src/sites/youtube/intercept';
+import { trapGlobal, wrapFetch as wrapFetchRaw, wrapXhr as wrapXhrRaw, type Pruner } from '../src/core/intercept';
+import { isFilteredUrl } from '../src/sites/youtube/intercept';
+
+const wrapFetch = (win: Window, p: Pruner) => wrapFetchRaw(win, p, isFilteredUrl);
+const wrapXhr = (win: Window, p: Pruner) => wrapXhrRaw(win, p, isFilteredUrl);
 
 vi.stubGlobal('location', new URL('https://www.youtube.com/'));
 

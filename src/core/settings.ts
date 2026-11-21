@@ -1,6 +1,8 @@
 /** User settings, stored in browser.storage.local under SETTINGS_KEY. */
 export interface Settings {
   enabled: boolean;
+  /** Also block all GTA games and everything Rockstar Games, not only GTA 6. */
+  strict: boolean;
   /** Epoch ms. Filtering is off until then; 0 means not paused. */
   pausedUntil: number;
   customTerms: string[];
@@ -17,6 +19,7 @@ export interface Stats {
 
 export const DEFAULT_SETTINGS: Settings = {
   enabled: true,
+  strict: false,
   pausedUntil: 0,
   customTerms: [],
   allowTerms: [],
@@ -34,6 +37,7 @@ export function withDefaults(stored: unknown): Settings {
     Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
   return {
     enabled: typeof s.enabled === 'boolean' ? s.enabled : DEFAULT_SETTINGS.enabled,
+    strict: s.strict === true,
     pausedUntil: typeof s.pausedUntil === 'number' ? s.pausedUntil : 0,
     customTerms: list(s.customTerms),
     allowTerms: list(s.allowTerms),

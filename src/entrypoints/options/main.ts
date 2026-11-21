@@ -8,6 +8,7 @@ const fields = ['customTerms', 'allowTerms', 'customChannels'] as const;
 async function init() {
   const settings = await loadSettings();
   for (const f of fields) $<HTMLTextAreaElement>(f).value = settings[f].join('\n');
+  $<HTMLInputElement>('strict').checked = settings.strict;
   await checkAccess();
 }
 
@@ -26,7 +27,7 @@ $<HTMLButtonElement>('save').addEventListener('click', async () => {
   const patch = Object.fromEntries(
     fields.map((f) => [f, parseLines($<HTMLTextAreaElement>(f).value)]),
   );
-  await saveSettings(patch);
+  await saveSettings({ ...patch, strict: $<HTMLInputElement>('strict').checked });
   const saved = $<HTMLElement>('saved');
   saved.hidden = false;
   setTimeout(() => (saved.hidden = true), 1500);

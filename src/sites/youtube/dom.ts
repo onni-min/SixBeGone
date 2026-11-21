@@ -8,6 +8,7 @@
  * nodes, because YouTube's components reuse their elements and break if
  * nodes disappear under them. That also makes unhiding trivial.
  */
+import { createHider, elementText, type Hider } from '../../core/hider';
 import type { Matcher } from '../../core/matcher';
 
 /** Cards that hold one piece of content. The outermost match is hidden. */
@@ -38,24 +39,11 @@ export const CARD_SELECTOR = [
 export const SHELF_SELECTOR = ['ytd-rich-shelf-renderer', 'ytd-reel-shelf-renderer', 'ytd-shelf-renderer'].join(',');
 const SHELF_HEADING_SELECTOR = '#title, #title-text, h2';
 
-export const HIDDEN_ATTR = 'data-sixbegone';
-export const HIDE_CSS = `[${HIDDEN_ATTR}="hidden"]{display:none!important}`;
-
-const MAX_CHARS = 3000;
+export { HIDDEN_ATTR, HIDE_CSS } from '../../core/hider';
 
 /** Text of a card: its visible text plus titles/labels only kept in attributes. */
 export function cardText(el: Element): string[] {
-  const parts: string[] = [];
-  const visible = (el.textContent ?? '').replace(/\s+/g, ' ').trim();
-  if (visible) parts.push(visible.slice(0, MAX_CHARS));
-  for (const a of el.querySelectorAll('[title], [aria-label]')) {
-    const t = a.getAttribute('title') ?? '';
-    const l = a.getAttribute('aria-label') ?? '';
-    if (t && !visible.includes(t)) parts.push(t);
-    if (l && !visible.includes(l)) parts.push(l);
-    if (parts.length > 20) break;
-  }
-  return parts;
+  return elementText(el);
 }
 
 /** Channel handles and ids linked from a card. */
@@ -79,56 +67,17 @@ function outermostCard(el: Element): Element {
   return top;
 }
 
-export interface Scanner {
-  /** Scan the page. Returns how many elements were newly hidden. */
-  scan(): number;
-  /** Unhide everything (filter turned off). */
-  reset(): void;
-  setMatcher(m: Matcher): void;
-}
+export type Scanner = Hider;
 
 export function createScanner(root: ParentNode, initial: Matcher): Scanner {
-  let matcher = initial;
-  // Last text each element was judged on, so unchanged cards are skipped.
-  // YouTube reuses card elements for new videos, so a changed text means a
-  // new item and must be judged again.
-  let seen = new WeakMap<Element, string>();
-
-  const judge = (el: Element, texts: string[]): boolean => {
-    const key = texts.join('\u0001');
-    if (seen.get(el) === key) return false;
-    seen.set(el, key);
-
-    const blocked = cardChannels(el).some((c) => matcher.isBlockedChannel(c)) || matcher.match(...texts).blocked;
-    const wasHidden = el.getAttribute(HIDDEN_ATTR) === 'hidden';
-    if (blocked && !wasHidden) {
-      el.setAttribute(HIDDEN_ATTR, 'hidden');
-      return true;
-    }
-    if (!blocked && wasHidden) el.removeAttribute(HIDDEN_ATTR);
-    return false;
-  };
-
-  return {
-    scan() {
-      let hidden = 0;
-      const cards = new Set<Element>();
-      for (const el of root.querySelectorAll(CARD_SELECTOR)) cards.add(outermostCard(el));
-      for (const card of cards) if (judge(card, cardText(card))) hidden++;
-
-      for (const shelf of root.querySelectorAll(SHELF_SELECTOR)) {
+  return createHider(root, initial, [
+    { selector: CARD_SELECTOR, container: outermostCard, text: cardText, authors: cardChannels },
+    {
+      selector: SHELF_SELECTOR,
+      text: (shelf) => {
         const heading = shelf.querySelector(SHELF_HEADING_SELECTOR)?.textContent?.trim();
-        if (heading && judge(shelf, [heading])) hidden++;
-      }
-      return hidden;
+        return heading ? [heading] : [];
+      },
     },
-    reset() {
-      for (const el of root.querySelectorAll(`[${HIDDEN_ATTR}]`)) el.removeAttribute(HIDDEN_ATTR);
-      seen = new WeakMap();
-    },
-    setMatcher(m) {
-      matcher = m;
-      seen = new WeakMap();
-    },
-  };
+  ]);
 }

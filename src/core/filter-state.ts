@@ -6,8 +6,8 @@
  * defaults, with filtering on, on a first run), so the very first response is
  * filtered correctly before the bridge has delivered anything.
  */
-import { compileMatcher, type Matcher } from './matcher';
-import { BUILTIN_RULES } from './rules';
+import type { Matcher } from './matcher';
+import { buildMatcher } from './rules';
 import { DEFAULT_SETTINGS, isActive, withDefaults, type Settings } from './settings';
 import { onMainMessage, readMirroredSettings, sendToIsolated } from './bridge';
 
@@ -54,9 +54,5 @@ export function createFilterState(): FilterState {
 }
 
 function build(s: Settings): Matcher {
-  return compileMatcher(BUILTIN_RULES, {
-    customTerms: s.customTerms,
-    allowTerms: s.allowTerms,
-    customChannels: s.customChannels,
-  });
+  return buildMatcher(s);
 }
