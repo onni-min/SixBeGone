@@ -14,7 +14,7 @@ These projects informed the design. Their code is **not** included, because thei
 |---|---|---|
 | [amitbl/blocktube](https://github.com/amitbl/blocktube) | GPL-3.0 | Filtering YouTube's JSON before render; fetch/XHR and initial-data hooks |
 | [varshneydevansh/FilterTube](https://github.com/varshneydevansh/FilterTube) | MIT | Renderer and view-model names (`lockupViewModel`, `shortsLockupViewModel`), the `ytInitialData` accessor trap. Our YouTube code is written independently; if code is adapted from FilterTube later, it moves to the section above. |
-| [MrOplus/x-interceptor](https://github.com/MrOplus/x-interceptor) | None (all rights reserved) | X GraphQL interception by operation name; payload pitfalls |
+| [MrOplus/x-interceptor](https://github.com/MrOplus/x-interceptor) | None (all rights reserved) | X GraphQL interception by operation name, judging entries by the tweets inside rather than entryId, depth-first pruning of `entries`/`items`/`moduleItems`, `note_tweet` for long posts. Our X code is written independently. |
 
 ## Build tools
 

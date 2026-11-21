@@ -1,6 +1,6 @@
 # SixBeGone
 
-A browser extension that **removes GTA 6 content** before you see it. YouTube comes first; X, TikTok and Instagram are planned.
+A browser extension that **removes GTA 6 content** before you see it, on YouTube and X. TikTok and Instagram are planned.
 
 Unlike blur-style spoiler blockers, SixBeGone filters a site's own data (the API responses the page loads) and drops GTA 6 items before the page draws them, so nothing flashes on screen. A page-level fallback catches anything that slips through.
 
@@ -16,10 +16,12 @@ Early development, YouTube complete for a first release:
 - Comments that mention GTA 6 are removed from every video. A thread stays if only a reply matches; the reply goes.
 - Autoplay won't roll into a GTA 6 video.
 
+On X: GTA 6 posts are removed from the home timeline, search, profiles, threads and lists before they render, including long posts, quote posts, reposts, link previews and image descriptions. A thread goes whole if its opening post matches; otherwise only the matching replies go. GTA 6 trends are removed from Explore and the sidebar.
+
 | Site | Status |
 |---|---|
-| YouTube | Done (needs real-world testing) |
-| X | Planned |
+| YouTube | Done |
+| X | Done (needs real-world testing) |
 | TikTok | Planned |
 | Instagram | Planned |
 
@@ -49,7 +51,7 @@ page loads feed ──► MAIN-world script (document_start)
 ```
 
 - `src/core/`: matcher, normalization, settings, and the bridge between the in-page script and the extension.
-- `src/sites/<site>/`: one folder per site integration.
+- `src/sites/<site>/`: one folder per site integration (`youtube`, `x`).
 - `src/entrypoints/`: WXT entrypoints (content scripts, background, popup, options).
 - `src/rules/`: built-in rules, shipped as data.
 

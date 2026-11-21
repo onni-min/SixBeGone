@@ -1,7 +1,8 @@
 import { sendToIsolated } from '../../core/bridge';
 import type { FilterState } from '../../core/filter-state';
 import type { Matcher } from '../../core/matcher';
-import { trapGlobal, wrapFetch, wrapXhr, type Pruner } from './intercept';
+import { trapGlobal, wrapFetch, wrapXhr, type Pruner } from '../../core/intercept';
+import { isFilteredUrl } from './intercept';
 import { extractShortInfo, extractWatchInfo, prune } from './walk';
 
 /**
@@ -24,8 +25,8 @@ export function startYouTube(state: FilterState, win: Window = window): void {
   };
 
   trapGlobal(win, 'ytInitialData', pruner);
-  wrapFetch(win, pruner);
-  wrapXhr(win, pruner);
+  wrapFetch(win, pruner, isFilteredUrl);
+  wrapXhr(win, pruner, isFilteredUrl);
 }
 
 function reportVerdicts(data: unknown, url: string | undefined, body: string | undefined, matcher: Matcher) {
