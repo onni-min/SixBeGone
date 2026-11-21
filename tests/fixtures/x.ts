@@ -174,3 +174,76 @@ export const exploreTrends = () => ({
     },
   },
 });
+
+/** A tweet in the late-2026 redesign shape: text in `details`, no legacy.full_text. */
+export const tweet2026 = (id: string, text: string, author = 'someone', extra: Record<string, unknown> = {}) => ({
+  __isTweetResult: 'Tweet',
+  __typename: 'Tweet',
+  id: `VHdlZXQ6${id}`,
+  rest_id: id,
+  core: user(author),
+  details: { created_at_ms: 1795213708210, display_text_range: [0, text.length], full_text: text, hashtag_entities: [] },
+  legacy: { conversation_id_str: id, entities: {}, lang: 'en' },
+  media_entities2: [],
+  ...extra,
+});
+
+/** UserOriginalsTimeline (profile) in the redesign, with a pinned post. */
+export const profileTimeline2026 = () => ({
+  data: {
+    user_result_by_screen_name: {
+      result: {
+        __typename: 'User',
+        id: 'VXNlcjox',
+        profile_user_originals_timeline: {
+          timeline: {
+            instructions: [
+              { type: 'TimelinePinEntry', __typename: 'TimelinePinEntry', entry: { entryId: 'tweet-p', content: { content: { tweet_results: { result: tweet2026('p', 'Pinned: GTA 6 day one!') } } } } },
+              {
+                type: 'TimelineAddEntries',
+                __typename: 'TimelineAddEntries',
+                entries: [
+                  {
+                    entryId: 'tweet-1',
+                    content: {
+                      __typename: 'TimelineTimelineItem',
+                      content: {
+                        __typename: 'TimelineTweet',
+                        tweet_results: {
+                          result: tweet2026('1', "im going to buy gta6, and spend 100 hours having my character go to sleep every night at 8 pm", 'bryan_johnson', {
+                            quoted_tweet_results: {
+                              __typename: 'TweetResults',
+                              rest_id: '10',
+                              result: tweet2026('10', 'Holy shit.\n\nIn GTA 6 you can literally do zone 2 cardio.', 'Brady_H'),
+                            },
+                          }),
+                        },
+                      },
+                    },
+                  },
+                  { entryId: 'tweet-2', content: { content: { tweet_results: { result: tweet2026('2', 'On @netflix Jan 1') } } } },
+                  { entryId: 'tweet-3', content: { content: { tweet_results: { result: tweet2026('3', 'quoting this', 'q', { quoted_tweet_results: { result: tweet2026('30', 'Leonida map is huge — GTA') } }) } } } },
+                  { entryId: 'cursor-bottom-1', content: { __typename: 'TimelineTimelineCursor', value: 'x', cursorType: 'Bottom' } },
+                ],
+              },
+            ],
+          },
+        },
+      },
+    },
+  },
+});
+
+/** newsSidebarQuery: AI news stories. */
+export const newsSidebar2026 = () => ({
+  data: {
+    story_topic: {
+      stories: {
+        items: [
+          { trend_results: { result: { __typename: 'AiTrend', core: { category: 'Gaming', name: 'GTA 6 Breaks Launch Sales Records Worldwide' }, rest_id: 'a1' } } },
+          { trend_results: { result: { __typename: 'AiTrend', core: { category: 'Sports', name: 'Derby Ends in Late Drama' }, rest_id: 'a2' } } },
+        ],
+      },
+    },
+  },
+});

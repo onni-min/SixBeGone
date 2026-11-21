@@ -81,7 +81,7 @@ export function createHider(root: ParentNode, initial: Matcher, targets: HideTar
 /** Visible text of an element plus titles/labels/alt text kept only in attributes. */
 export function elementText(el: Element, maxChars = 3000): string[] {
   const parts: string[] = [];
-  const visible = (el.textContent ?? '').replace(/\s+/g, ' ').trim();
+  const visible = spacedText(el, maxChars);
   if (visible) parts.push(visible.slice(0, maxChars));
   for (const a of el.querySelectorAll('[title], [aria-label], img[alt]')) {
     for (const attr of ['title', 'aria-label', 'alt']) {
@@ -91,4 +91,25 @@ export function elementText(el: Element, maxChars = 3000): string[] {
     if (parts.length > 24) break;
   }
   return parts;
+}
+
+/**
+ * Text of an element with a space between text nodes. textContent glues
+ * neighbouring elements together ("@Brady_H" + "Nov 19" + "Holy…" becomes
+ * "@Brady_HNov 19Holy…"), which can merge a name into the first word of a
+ * post and break phrase matching.
+ */
+export function spacedText(el: Element, maxChars = 3000): string {
+  const doc = el.ownerDocument;
+  const walker = doc.createTreeWalker(el, 4 /* NodeFilter.SHOW_TEXT */);
+  const parts: string[] = [];
+  let len = 0;
+  for (let n = walker.nextNode(); n && len < maxChars; n = walker.nextNode()) {
+    const t = n.nodeValue;
+    if (t && t.trim()) {
+      parts.push(t);
+      len += t.length;
+    }
+  }
+  return parts.join(' ').replace(/\s+/g, ' ').trim().slice(0, maxChars);
 }

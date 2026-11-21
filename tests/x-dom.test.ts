@@ -40,3 +40,48 @@ describe('X DOM fallback', () => {
     expect(tweetAuthors(document.querySelector('article')!)).toEqual(['alice']);
   });
 });
+
+describe('X DOM fallback (redesign markup)', () => {
+  const post = (i: number, handle: string, text: string, quote = '') => `
+    <li data-index="${i}" id="li${i}">
+      <div role="link" data-href="/${handle}/status/${i}00">
+        <article class="flex flex-col">
+          <span>${handle}</span><div>${text}</div>
+          ${quote}
+        </article>
+      </div>
+    </li>`;
+  const quote = (handle: string, text: string) =>
+    `<div role="link" data-slot="embedded-tweet-frame" data-href="/${handle}/status/999"><article><span>${handle}</span><div>${text}</div></article></div>`;
+
+  it('hides rows whose post or quoted post matches, and trend rows', () => {
+    document.body.innerHTML = `
+      <ul>
+        ${post(1, 'bryan_johnson', 'im going to buy gta6', quote('Brady_H', 'In GTA 6 you can literally do zone 2 cardio.'))}
+        ${post(2, 'friend', 'Lunch', quote('other', 'nice view'))}
+        ${post(3, 'quoter', 'lol', quote('leaker', 'Grand Theft Auto VI map'))}
+      </ul>
+      <ul>
+        <li id="tr1"><div role="link" data-href="/i/trending/123"><span>GTA 6 Breaks Launch Sales Records</span></div></li>
+        <li id="tr2"><div role="link" data-href="/i/trending/456"><span>Derby day</span></div></li>
+      </ul>`;
+    const s = createXScanner(document, buildMatcher(DEFAULT_SETTINGS));
+    const n = s.scan();
+    const hidden = [...document.querySelectorAll(`[${HIDDEN_ATTR}="hidden"]`)].map((e) => e.id).sort();
+    expect(hidden).toEqual(['li1', 'li3', 'tr1']);
+    expect(n).toBe(3);
+  });
+
+  it('reads authors from data-href, including the quoted author', () => {
+    document.body.innerHTML = `<ul>${post(1, 'alice', 'x', quote('bob', 'y'))}</ul>`;
+    expect(tweetAuthors(document.querySelector('article')!).sort()).toEqual(['alice', 'bob']);
+  });
+
+  it('blocks rows quoting a blocked account', () => {
+    document.body.innerHTML = `<ul>${post(1, 'alice', 'x', quote('Leaker', 'y'))}${post(2, 'carol', 'z')}</ul>`;
+    const s = createXScanner(document, buildMatcher({ ...DEFAULT_SETTINGS, customChannels: ['leaker'] }));
+    s.scan();
+    expect(document.getElementById('li1')!.getAttribute(HIDDEN_ATTR)).toBe('hidden');
+    expect(document.getElementById('li2')!.getAttribute(HIDDEN_ATTR)).toBeNull();
+  });
+});

@@ -37,8 +37,13 @@ export function tweetInfo(node: Record<string, any>): Judged {
   };
 
   // note_tweet holds the full body of long posts; full_text is cut at 280.
-  push(node.note_tweet?.note_tweet_results?.result?.text ?? legacy.full_text);
-  for (const m of legacy.extended_entities?.media ?? legacy.entities?.media ?? []) push(m?.ext_alt_text);
+  // Since X's late-2026 redesign the text sits in `details`, not `legacy`.
+  push(node.note_tweet?.note_tweet_results?.result?.text ?? node.details?.full_text ?? legacy.full_text);
+  const media = [
+    ...(node.media_entities2 ?? []),
+    ...(legacy.extended_entities?.media ?? legacy.entities?.media ?? []),
+  ];
+  for (const m of media) push(m?.ext_alt_text);
   // Link preview cards (article title/description).
   for (const b of node.card?.legacy?.binding_values ?? []) {
     if (['title', 'description'].includes(b?.key)) push(b?.value?.string_value);
@@ -70,8 +75,12 @@ export function collect(node: unknown): Judged[] {
       return;
     }
     const o = v as Record<string, any>;
-    if (o.__typename === 'Tweet' && (o.legacy || o.note_tweet)) out.push(tweetInfo(o));
+    if (o.__typename === 'Tweet' && (o.legacy || o.note_tweet || o.details)) out.push(tweetInfo(o));
     else if (o.__typename === 'TimelineTrend' && typeof o.name === 'string') out.push(trendInfo(o));
+    // AI-written news stories in the sidebar and Explore ("Today's News").
+    else if (o.__typename === 'AiTrend' && typeof o.core?.name === 'string') {
+      out.push({ kind: 'trend', text: [o.core.name, o.core.category].filter((t) => typeof t === 'string'), authors: [] });
+    }
     // TweetWithVisibilityResults wraps the tweet in `.tweet`; quoted and
     // retweeted tweets are nested Tweet nodes. Walking everything finds all.
     for (const x of Object.values(o)) visit(x, depth + 1);
@@ -104,6 +113,22 @@ export function prune(data: unknown, matcher: Matcher): number {
       return;
     }
     for (const [key, value] of Object.entries(node as Record<string, unknown>)) {
+      if (key === 'instructions' && Array.isArray(value)) {
+        // A pinned post arrives as its own instruction ({ type:
+        // 'TimelinePinEntry', entry }) rather than inside `entries`.
+        let write = 0;
+        for (const inst of value) {
+          const entry = (inst as { entry?: unknown } | null)?.entry;
+          if (entry && collect(entry).some((j) => blocked(j, matcher))) {
+            removed++;
+            continue;
+          }
+          walk(inst, depth + 1);
+          value[write++] = inst;
+        }
+        value.length = write;
+        continue;
+      }
       if (!PRUNABLE.has(key) || !Array.isArray(value)) {
         walk(value, depth + 1);
         continue;
@@ -154,20 +179,27 @@ export function operationName(url: string): string | undefined {
 
 /**
  * GraphQL operations that only write (posting, liking, following…). Their
- * responses are left alone. Everything else under /i/api/graphql/ is
- * pruned, so new timeline operations are covered without code changes.
+ * responses are left alone. Everything else is pruned, so new timeline
+ * operations are covered without code changes. Older names start with a
+ * verb (CreateTweet); since the redesign they end in "Mutation".
  */
-const WRITE_OPERATIONS = /^(Create|Delete|Favorite|Unfavorite|Follow|Unfollow|Mute|Unmute|Block|Unblock|Pin|Unpin|Update|Remove|Add)/;
+const WRITE_OPERATIONS =
+  /^(Create|Delete|Favorite|Unfavorite|Follow|Unfollow|Mute|Unmute|Block|Unblock|Pin|Unpin|Update|Remove|Add)|Mutation$/;
+
+/** Hosts X serves its API from: x.com/i/api/… before the redesign, api.x.com after. */
+const X_API_HOSTS = new Set(['x.com', 'api.x.com', 'twitter.com', 'api.twitter.com', 'mobile.x.com']);
 
 export function isFilteredXUrl(url: string): boolean {
-  let path: string;
+  let u: URL;
   try {
-    path = new URL(url, 'https://x.com').pathname;
+    u = new URL(url, 'https://x.com');
   } catch {
     return false;
   }
-  if (path.startsWith('/i/api/2/guide.json')) return true; // trends (older REST)
-  if (!path.includes('/i/api/graphql/')) return false;
+  if (!X_API_HOSTS.has(u.hostname)) return false;
+  if (u.pathname.startsWith('/i/api/2/guide.json')) return true; // trends (older REST)
+  // /i/api/graphql/<id>/<Op> (old) or /graphql/<id>/<Op> on api.x.com (new).
+  if (!/^\/(i\/api\/)?graphql\/[^/]+\/[^/]+/.test(u.pathname)) return false;
   const op = operationName(url);
   return !!op && !WRITE_OPERATIONS.test(op);
 }
