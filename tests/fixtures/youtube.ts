@@ -216,3 +216,92 @@ export const homeContinuation = () => ({
     },
   ],
 });
+
+/** New-format comments: thread holds only a commentId; text is in frameworkUpdates. */
+export const commentEntity = (id: string, text: string, author = '@viewer', channelId = 'UCviewer') => ({
+  payload: {
+    commentEntityPayload: {
+      key: `comment-${id}`,
+      properties: { commentId: id, content: { content: text } },
+      author: { displayName: author, channelId },
+    },
+  },
+});
+
+export const commentThread = (id: string, replies: object[] = []) => ({
+  commentThreadRenderer: {
+    commentViewModel: { commentViewModel: { commentId: id, commentKey: `comment-${id}` } },
+    ...(replies.length ? { replies: { commentRepliesRenderer: { contents: replies } } } : {}),
+  },
+});
+
+export const commentsContinuation = () => ({
+  onResponseReceivedEndpoints: [
+    {
+      reloadContinuationItemsCommand: {
+        continuationItems: [
+          commentThread('t1'),
+          commentThread('t2', [{ commentViewModel: { commentId: 'r1' } }, { commentViewModel: { commentId: 'r2' } }]),
+          commentThread('t3'),
+          { commentThreadRenderer: { comment: { commentRenderer: { contentText: run('Old format: GTA 6 hype') } } } },
+          continuation(),
+        ],
+      },
+    },
+  ],
+  frameworkUpdates: {
+    entityBatchUpdate: {
+      mutations: [
+        commentEntity('t1', 'Great video, thanks!'),
+        commentEntity('t2', 'Anyone else here after finishing the game?'),
+        commentEntity('r1', 'yes, GTA 6 ending was wild'),
+        commentEntity('r2', 'same'),
+        commentEntity('t3', 'Lucia Caminos deserved better'),
+      ],
+    },
+  },
+});
+
+/** Watch-next response for a video, with autoplay pointing at `nextTitle`. */
+export const watchNextFor = (videoId: string, title: string, channel: string, nextTitle: string) => ({
+  currentVideoEndpoint: { watchEndpoint: { videoId } },
+  contents: {
+    twoColumnWatchNextResults: {
+      results: {
+        results: {
+          contents: [
+            { videoPrimaryInfoRenderer: { title: run(title) } },
+            {
+              videoSecondaryInfoRenderer: {
+                owner: {
+                  videoOwnerRenderer: {
+                    title: run(channel),
+                    navigationEndpoint: { browseEndpoint: { browseId: 'UCowner' } },
+                  },
+                },
+              },
+            },
+          ],
+        },
+      },
+      autoplay: { autoplay: { sets: [{ autoplayVideo: { watchEndpoint: { videoId: 'next1' } } }] } },
+    },
+  },
+  playerOverlays: {
+    playerOverlayRenderer: {
+      autoplay: {
+        playerOverlayAutoplayRenderer: { videoTitle: { simpleText: nextTitle }, byline: run('Next Channel') },
+      },
+    },
+  },
+});
+
+export const reelItemWatch = (videoId: string, title: string) => ({
+  replacementEndpoint: { reelWatchEndpoint: { videoId } },
+  overlay: {
+    reelPlayerOverlayRenderer: {
+      reelTitleText: { runs: [{ text: title }] },
+      reelPlayerHeaderSupportedRenderers: { reelPlayerHeaderRenderer: { channelTitleText: run('Shorts Channel') } },
+    },
+  },
+});

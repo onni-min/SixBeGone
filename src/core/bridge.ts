@@ -19,7 +19,11 @@ const TO_MAIN = 'sixbegone:to-main';
 const TO_ISOLATED = 'sixbegone:to-isolated';
 
 export type ToMain = { type: 'settings'; settings: Settings };
-export type ToIsolated = { type: 'hello' } | { type: 'removed'; count: number };
+export type ToIsolated =
+  | { type: 'hello' }
+  | { type: 'removed'; count: number }
+  /** Verdict on a watch-page video or a Short, from the data YouTube loaded for it. */
+  | { type: 'video'; kind: 'watch' | 'short'; videoId: string; blocked: boolean };
 
 function send(name: string, msg: unknown) {
   document.dispatchEvent(new CustomEvent(name, { detail: JSON.stringify(msg) }));

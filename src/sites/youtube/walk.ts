@@ -48,9 +48,12 @@ export const ITEM_KEYS = new Set([
   // Channels in search results (e.g. a "GTA 6 News" channel)
   'channelRenderer',
   'gridChannelRenderer',
-  // Comments (older format; text is inline)
+  // Comments. The older format has the text inline; the newer
+  // commentViewModel only holds a commentId, and the text sits in a
+  // commentEntityPayload under frameworkUpdates (see buildCommentLookup).
   'commentThreadRenderer',
   'commentRenderer',
+  'commentViewModel',
 ]);
 
 /** Wrappers whose `content` holds one item (home grid, channel grids). */
@@ -95,8 +98,11 @@ export interface ItemInfo {
   channels: string[];
 }
 
+/** Text and author of comments in the newer format, keyed by commentId. */
+export type CommentLookup = Map<string, ItemInfo>;
+
 /** Collect readable text and channel identifiers from one item. */
-export function extractItem(node: unknown): ItemInfo {
+export function extractItem(node: unknown, comments?: CommentLookup): ItemInfo {
   const text: string[] = [];
   const channels = new Set<string>();
   let chars = 0;
@@ -107,10 +113,16 @@ export function extractItem(node: unknown): ItemInfo {
       if (TEXT_KEYS.has(key) && value.trim()) {
         text.push(value);
         chars += value.length;
-      } else if (key === 'browseId' && value.startsWith('UC')) {
+      } else if ((key === 'browseId' || key === 'channelId') && value.startsWith('UC')) {
         channels.add(value);
       } else if (key === 'canonicalBaseUrl' && value.startsWith('/@')) {
         channels.add(value.slice(1));
+      } else if (key === 'commentId' && comments) {
+        const c = comments.get(value);
+        if (c) {
+          text.push(...c.text);
+          c.channels.forEach((ch) => channels.add(ch));
+        }
       }
       return;
     }
@@ -120,13 +132,46 @@ export function extractItem(node: unknown): ItemInfo {
     }
     if (value && typeof value === 'object') {
       for (const [k, v] of Object.entries(value)) {
-        if (!SKIP_KEYS.has(k)) visit(v, k, depth + 1);
+        // A thread is judged on its own comment, not on its replies.
+        if (!SKIP_KEYS.has(k) && k !== 'replies') visit(v, k, depth + 1);
       }
     }
   };
 
   visit(node, '', 0);
   return { text, channels: [...channels] };
+}
+
+/**
+ * Find every commentEntityPayload in the response and index its text and
+ * author by commentId, so a commentViewModel (which holds only the id) can
+ * be judged on what the comment says.
+ */
+export function buildCommentLookup(data: unknown): CommentLookup {
+  const lookup: CommentLookup = new Map();
+  const visit = (value: unknown, depth: number) => {
+    if (depth > MAX_DEPTH * 4 || !value || typeof value !== 'object') return;
+    if (Array.isArray(value)) {
+      for (const v of value) visit(v, depth + 1);
+      return;
+    }
+    const obj = value as Record<string, unknown>;
+    const payload = obj.commentEntityPayload as
+      | { properties?: { commentId?: unknown; content?: { content?: unknown } }; author?: { displayName?: unknown; channelId?: unknown } }
+      | undefined;
+    const id = payload?.properties?.commentId;
+    if (typeof id === 'string') {
+      const text = [payload?.properties?.content?.content, payload?.author?.displayName].filter(
+        (t): t is string => typeof t === 'string' && t.length > 0,
+      );
+      const ch = payload?.author?.channelId;
+      lookup.set(id, { text, channels: typeof ch === 'string' ? [ch] : [] });
+      return;
+    }
+    for (const [k, v] of Object.entries(obj)) if (!SKIP_KEYS.has(k)) visit(v, depth + 1);
+  };
+  visit(data, 0);
+  return lookup;
 }
 
 function isBlocked(info: ItemInfo, matcher: Matcher): boolean {
@@ -144,19 +189,23 @@ function elementKey(el: Record<string, unknown>): string | undefined {
 
 type Verdict = 'remove' | 'keep' | 'descend';
 
-function judge(el: unknown, matcher: Matcher): Verdict {
+function judge(el: unknown, matcher: Matcher, comments: CommentLookup): Verdict {
   if (!el || typeof el !== 'object' || Array.isArray(el)) return 'descend';
   const obj = el as Record<string, unknown>;
   const key = elementKey(obj);
   if (!key) return 'descend';
 
-  if (ITEM_KEYS.has(key)) return isBlocked(extractItem(obj[key]), matcher) ? 'remove' : 'keep';
+  if (ITEM_KEYS.has(key)) {
+    if (isBlocked(extractItem(obj[key], comments), matcher)) return 'remove';
+    // A comment thread that stays may hold replies loaded inline.
+    return key === 'commentThreadRenderer' ? 'descend' : 'keep';
+  }
 
   if (WRAPPER_KEYS.has(key)) {
     const content = (obj[key] as { content?: Record<string, unknown> } | undefined)?.content;
     const inner = content && elementKey(content);
     if (inner && ITEM_KEYS.has(inner)) {
-      return isBlocked(extractItem(content[inner]), matcher) ? 'remove' : 'keep';
+      return isBlocked(extractItem(content[inner], comments), matcher) ? 'remove' : 'keep';
     }
     return 'descend';
   }
@@ -196,6 +245,7 @@ function isEmptiedShelf(el: unknown): boolean {
  */
 export function prune(data: unknown, matcher: Matcher): number {
   let removed = 0;
+  const comments = buildCommentLookup(data);
 
   const walk = (value: unknown, depth: number) => {
     if (depth > MAX_DEPTH * 4 || !value || typeof value !== 'object') return;
@@ -204,7 +254,7 @@ export function prune(data: unknown, matcher: Matcher): number {
       let write = 0;
       for (let read = 0; read < value.length; read++) {
         const el = value[read];
-        const verdict = judge(el, matcher);
+        const verdict = judge(el, matcher, comments);
         if (verdict === 'remove') {
           removed++;
           continue;
@@ -226,5 +276,101 @@ export function prune(data: unknown, matcher: Matcher): number {
   };
 
   walk(data, 0);
-  return removed;
+  return removed + pruneAutoplay(data, matcher);
+}
+
+/**
+ * Stop autoplay from rolling into a GTA 6 video. The watch-next response
+ * names the next video in playerOverlayAutoplayRenderer (title, channel) and
+ * queues it in twoColumnWatchNextResults.autoplay. When the next video
+ * matches, both are removed, so the video simply ends.
+ */
+export function pruneAutoplay(data: unknown, matcher: Matcher): number {
+  let blocked = false;
+  const findOverlay = (value: unknown, depth: number) => {
+    if (blocked || depth > MAX_DEPTH * 4 || !value || typeof value !== 'object') return;
+    if (Array.isArray(value)) return value.forEach((v) => findOverlay(v, depth + 1));
+    const obj = value as Record<string, unknown>;
+    if (obj.playerOverlayAutoplayRenderer && typeof obj.playerOverlayAutoplayRenderer === 'object') {
+      if (isBlocked(extractItem(obj.playerOverlayAutoplayRenderer), matcher)) {
+        delete obj.playerOverlayAutoplayRenderer;
+        blocked = true;
+      }
+      return;
+    }
+    for (const [k, v] of Object.entries(obj)) if (!SKIP_KEYS.has(k)) findOverlay(v, depth + 1);
+  };
+  findOverlay(data, 0);
+  if (!blocked) return 0;
+
+  const results = (data as { contents?: { twoColumnWatchNextResults?: Record<string, unknown> } })?.contents
+    ?.twoColumnWatchNextResults;
+  if (results && 'autoplay' in results) delete results.autoplay;
+  return 1;
+}
+
+export interface VideoInfo {
+  videoId: string;
+  title: string;
+  channel?: string;
+  channelId?: string;
+}
+
+/**
+ * Which video a watch-page response is for: from ytInitialData or a
+ * /next or /get_watch response. Only the title and channel are used to
+ * decide, not the description or tags: creators often stuff "GTA 6" into
+ * tags and descriptions of unrelated videos.
+ */
+export function extractWatchInfo(data: unknown): VideoInfo | undefined {
+  const responses = Array.isArray(data) ? data : [data];
+  for (const r of responses) {
+    const root = r as Record<string, any> | undefined;
+    if (!root || typeof root !== 'object') continue;
+    const videoId: unknown = root.currentVideoEndpoint?.watchEndpoint?.videoId;
+    const contents: unknown[] = root.contents?.twoColumnWatchNextResults?.results?.results?.contents ?? [];
+    let title: string | undefined;
+    let channel: string | undefined;
+    let channelId: string | undefined;
+    for (const el of contents as Array<Record<string, any>>) {
+      const primary = el?.videoPrimaryInfoRenderer;
+      if (primary) title = runsText(primary.title);
+      const owner = el?.videoSecondaryInfoRenderer?.owner?.videoOwnerRenderer;
+      if (owner) {
+        channel = runsText(owner.title);
+        channelId = owner.navigationEndpoint?.browseEndpoint?.browseId;
+      }
+    }
+    if (typeof videoId === 'string' && title) return { videoId, title, channel, channelId };
+  }
+  return undefined;
+}
+
+/**
+ * Which Short a /reel/reel_item_watch response is for, and its text. The
+ * videoId comes from the response or, failing that, from the request body.
+ */
+export function extractShortInfo(data: unknown, requestBody?: string): (ItemInfo & { videoId: string }) | undefined {
+  const root = data as Record<string, any> | undefined;
+  if (!root || typeof root !== 'object') return undefined;
+  let videoId: unknown = root.replacementEndpoint?.reelWatchEndpoint?.videoId;
+  if (typeof videoId !== 'string' && requestBody) {
+    try {
+      const body = JSON.parse(requestBody);
+      videoId = body?.playerRequest?.videoId ?? body?.videoId;
+    } catch {
+      // Not JSON.
+    }
+  }
+  if (typeof videoId !== 'string') return undefined;
+  const info = extractItem(root.overlay ?? root);
+  return { videoId, ...info };
+}
+
+function runsText(t: unknown): string | undefined {
+  const o = t as { simpleText?: string; runs?: Array<{ text?: string }> } | undefined;
+  if (!o) return undefined;
+  if (typeof o.simpleText === 'string') return o.simpleText;
+  const s = o.runs?.map((r) => r.text ?? '').join('');
+  return s || undefined;
 }

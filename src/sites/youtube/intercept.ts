@@ -16,9 +16,19 @@
  */
 
 /** Endpoints whose responses contain feed items. */
-export const FILTERED_ENDPOINTS = /\/youtubei\/v1\/(browse|search|next|get_watch|reel\/reel_watch_sequence)(\?|$)/;
+export const FILTERED_ENDPOINTS =
+  /\/youtubei\/v1\/(browse|search|next|get_watch|reel\/reel_watch_sequence|reel\/reel_item_watch)(\?|$)/;
 
-export type Pruner = (data: unknown, source: string) => void;
+export interface PruneContext {
+  /** 'ytInitialData', 'fetch' or 'xhr'. */
+  source: string;
+  /** Request URL, for network responses. */
+  url?: string;
+  /** Request body when it was a string (InnerTube sends JSON). */
+  body?: string;
+}
+
+export type Pruner = (data: unknown, ctx: PruneContext) => void;
 
 export function isFilteredUrl(url: string): boolean {
   try {
@@ -34,14 +44,14 @@ export function trapGlobal(win: Window, name: string, prune: Pruner): void {
   if (desc && !desc.configurable) return;
 
   let value: unknown = desc && 'value' in desc ? desc.value : undefined;
-  if (value && typeof value === 'object') safePrune(prune, value, name);
+  if (value && typeof value === 'object') safePrune(prune, value, { source: name });
 
   Object.defineProperty(win, name, {
     configurable: true,
     enumerable: true,
     get: () => value,
     set: (next: unknown) => {
-      if (next && typeof next === 'object') safePrune(prune, next, name);
+      if (next && typeof next === 'object') safePrune(prune, next, { source: name });
       value = next;
     },
   });
@@ -58,7 +68,8 @@ export function wrapFetch(win: Window, prune: Pruner): void {
 
     try {
       const data: unknown = await response.clone().json();
-      safePrune(prune, data, 'fetch');
+      const body = typeof init?.body === 'string' ? init.body : undefined;
+      safePrune(prune, data, { source: 'fetch', url, body });
       const filtered = new Response(JSON.stringify(data), {
         status: response.status,
         statusText: response.statusText,
@@ -85,11 +96,22 @@ export function wrapXhr(win: Window, prune: Pruner): void {
   const getText = textDesc.get;
   const getResponse = responseDesc.get;
   const originalOpen = proto.open;
+  const originalSend = proto.send;
+  const bodies = new WeakMap<XMLHttpRequest, string>();
+  const urls = new WeakMap<XMLHttpRequest, string>();
 
   proto.open = function (this: XMLHttpRequest, method: string, url: string | URL, ...rest: unknown[]) {
-    if (isFilteredUrl(String(url))) shadow(this);
+    if (isFilteredUrl(String(url))) {
+      urls.set(this, String(url));
+      shadow(this);
+    }
     return (originalOpen as (...a: unknown[]) => void).call(this, method, url, ...rest);
   } as typeof proto.open;
+
+  proto.send = function (this: XMLHttpRequest, body?: Document | XMLHttpRequestBodyInit | null) {
+    if (typeof body === 'string' && urls.has(this)) bodies.set(this, body);
+    return originalSend.call(this, body);
+  };
 
   // Shadow responseText/response on the instance. A `load` listener would run
   // too late: YouTube's own handlers may read the response first.
@@ -103,7 +125,9 @@ export function wrapXhr(win: Window, prune: Pruner): void {
         const type = xhr.responseType;
         const data: unknown =
           type === 'json' ? getResponse.call(xhr) : JSON.parse(getText.call(xhr) as string);
-        if (data && typeof data === 'object') safePrune(prune, data, 'xhr');
+        if (data && typeof data === 'object') {
+          safePrune(prune, data, { source: 'xhr', url: urls.get(xhr), body: bodies.get(xhr) });
+        }
         cached = { text: JSON.stringify(data), data };
       } catch {
         cached = undefined;
@@ -131,10 +155,10 @@ export function wrapXhr(win: Window, prune: Pruner): void {
   }
 }
 
-function safePrune(prune: Pruner, data: unknown, source: string) {
+function safePrune(prune: Pruner, data: unknown, ctx: PruneContext) {
   try {
-    prune(data, source);
+    prune(data, ctx);
   } catch (err) {
-    console.debug('[SixBeGone] filtering skipped:', source, err);
+    console.debug('[SixBeGone] filtering skipped:', ctx.source, err);
   }
 }

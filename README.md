@@ -8,11 +8,17 @@ Unlike blur-style spoiler blockers, SixBeGone filters a site's own data (the API
 
 ## Status
 
-Early development. YouTube filtering works for the home feed, search, the watch-page sidebar and end screen, Shorts shelves, and infinite scroll (M1). Next (M2): the Shorts player, a blocking overlay for GTA 6 watch pages, comments, and autoplay.
+Early development, YouTube complete for a first release:
+
+- Home feed, subscriptions, search, watch-page sidebar, end screen, Shorts shelves and infinite scroll: GTA 6 items are removed before they render.
+- Opening a GTA 6 video directly shows a full-page cover with the player paused ("Go back" or "Watch anyway").
+- GTA 6 Shorts are skipped in the Shorts player.
+- Comments that mention GTA 6 are removed from every video. A thread stays if only a reply matches; the reply goes.
+- Autoplay won't roll into a GTA 6 video.
 
 | Site | Status |
 |---|---|
-| YouTube | Feeds, search, sidebar (M1); Shorts player, watch page, comments next |
+| YouTube | Done (needs real-world testing) |
 | X | Planned |
 | TikTok | Planned |
 | Instagram | Planned |
