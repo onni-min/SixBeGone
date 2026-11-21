@@ -1,0 +1,29 @@
+{
+  "$comment": "Strict mode rules, added on top of gta6.json when the user turns strict mode on. Blocks everything GTA (any game, GTA Online, RP servers) and Rockstar Games with its other franchises. Bare 'rockstar' is weak so energy drinks and music stay visible unless another Rockstar term appears.",
+  "version": 1,
+  "terms": [
+    { "phrase": "gta", "weight": 10 },
+    { "phrase": "grand theft auto", "weight": 10 },
+    { "phrase": "gta online", "weight": 10 },
+    { "phrase": "vice city", "weight": 10 },
+    { "phrase": "san andreas", "weight": 10 },
+    { "phrase": "liberty city", "weight": 10 },
+    { "phrase": "los santos", "weight": 10 },
+    { "phrase": "fivem", "weight": 10 },
+    { "phrase": "гта", "weight": 10 },
+
+    { "phrase": "rockstar games", "weight": 10 },
+    { "phrase": "rockstargames", "weight": 10 },
+    { "phrase": "rockstar north", "weight": 10 },
+    { "phrase": "red dead redemption", "weight": 10 },
+    { "phrase": "red dead online", "weight": 10 },
+    { "phrase": "rdr 2", "weight": 10 },
+    { "phrase": "max payne", "weight": 10 },
+    { "phrase": "la noire", "weight": 10 },
+
+    { "phrase": "rockstar", "weight": 5 },
+    { "phrase": "red dead", "weight": 6 },
+    { "phrase": "bully", "weight": 3 }
+  ],
+  "channels": ["@rockstargames", "rockstargames"]
+}

@@ -1,6 +1,5 @@
 import { onIsolatedMessage, type ToIsolated } from '../core/bridge';
-import { compileMatcher } from '../core/matcher';
-import { BUILTIN_RULES } from '../core/rules';
+import { buildMatcher } from '../core/rules';
 import { isActive, type Settings } from '../core/settings';
 import { YOUTUBE_MATCHES } from '../core/sites';
 import { addRemoved, loadSettings, onSettingsChanged } from '../core/storage';
@@ -27,12 +26,7 @@ export default defineContentScript({
     style.textContent = HIDE_CSS;
     (document.head ?? document.documentElement).append(style);
 
-    const build = (s: Settings) =>
-      compileMatcher(BUILTIN_RULES, {
-        customTerms: s.customTerms,
-        allowTerms: s.allowTerms,
-        customChannels: s.customChannels,
-      });
+    const build = buildMatcher;
 
     let settings = await loadSettings();
     let matcher = build(settings);

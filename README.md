@@ -34,6 +34,8 @@ Matching uses weighted phrases (see [`src/rules/gta6.json`](src/rules/gta6.json)
 
 Text is normalized first, so `G.T.A. 6`, `gta6`, `GTAVI`, full-width characters and zero-width-character tricks all match.
 
+**Strict mode** (toggle in the popup or settings) widens this to all GTA games (GTA 5, GTA Online, Vice City, San Andreas, FiveM/RP…) and everything Rockstar Games makes, including Red Dead Redemption, Max Payne and L.A. Noire. Plain "rockstar" alone isn't enough, so energy drinks and music stay visible. The extra phrases are in [`src/rules/strict.json`](src/rules/strict.json).
+
 In settings you can add your own keywords, phrases to always show, and channels to block.
 
 ## How it works
